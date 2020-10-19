@@ -1,22 +1,22 @@
 #![cfg(target_os = "android")]
 #![allow(non_snake_case)]
 
-use std::ptr;
-use std::ffi::CString;
-
-use jni::objects::{JClass, JString};
-use jni::sys::{jboolean, jlong, jchar};
-use jni::JNIEnv;
-
-use crate::ffi;
-use std::os::raw::c_char;
-
+use std::ffi::{CStr, CString};
 use std::fs::OpenOptions;
 use std::io::prelude::*;
+use std::os::raw::c_char;
+use std::ptr;
+
+use jni::objects::{JClass, JString};
+use jni::sys::{jboolean, jchar, jlong};
+use jni::JNIEnv;
 
 extern crate android_logger;
-use log::Level;
 use android_logger::Config;
+use log::Level;
+
+use crate::ffi;
+use util;
 
 static mut DNS_HANDLE: Option<*mut ffi::Handle> = None;
 
@@ -30,7 +30,7 @@ pub unsafe extern "C" fn create_new_dns(
   dns_port: jchar,
   dns_name: JString,
   dns_path: JString,
-  use_doh: jboolean
+  use_doh: jboolean,
 ) -> jlong {
   let addr: String = env.get_string(listen_addr).expect("JNI param fail").into();
   let ips: String = env.get_string(dns_ips).expect("JNI param fail").into();
@@ -42,33 +42,29 @@ pub unsafe extern "C" fn create_new_dns(
     mode = ffi::DNSMode::HTTPS;
   }
 
-  DNS_HANDLE = Some(ffi::new_dns(CString::new(addr).expect("no cstring").as_ptr(),
-    ptr::null(), ptr::null(),
+  DNS_HANDLE = Some(ffi::new_dns(
+    CString::new(addr).expect("no cstring").as_ptr(),
+    ptr::null(),
+    ptr::null(),
     CString::new(ips).expect("no cstring").as_ptr(),
     dns_port,
     CString::new(name).expect("no cstring").as_ptr(),
     //CString::new(path).expect("no cstring").as_ptr(),
-    mode
+    mode,
   ));
   0
 }
 
 #[no_mangle]
 #[export_name = "Java_com_blocka_dns_BlockaDnsJNI_00024Companion_dns_1close"]
-pub unsafe extern "C" fn close_dns(
-  env: JNIEnv,
-  _class: JClass,
-  handle: jlong,
-) {
+pub unsafe extern "C" fn close_dns(env: JNIEnv, _class: JClass, handle: jlong) {
   match DNS_HANDLE {
     Some(h) => {
       panic!("lol this crash");
       ffi::dns_close(h);
       DNS_HANDLE = None;
     }
-    None => {
-      log::error!("Requested to close dns when no handle")
-    }
+    None => log::error!("Requested to close dns when no handle"),
   };
 }
 
@@ -80,25 +76,29 @@ pub unsafe extern "C" fn engine_logger(
   level: JString,
   logfile: JString,
 ) {
+  // TODO: expect may panic before panic hook is in place
   let lvl: String = env.get_string(level).expect("JNI param fail").into();
-  let log: String = env.get_string(logfile).expect("JNI param fail").into();
+  let log_file: String = env.get_string(logfile).expect("JNI param fail").into();
+  let lvl = Level::from_str(lvl).unwrap_or(Level::Debug);
 
-  log::debug!("Initiated logging in blocka_dns, level: {}, {}", lvl, log);
-
-  let file = OpenOptions::new()
+  let log_file = OpenOptions::new()
     .write(true)
     .append(true)
-    .open(log)
+    .open(log_file)
     .unwrap();
 
-  extern "C" fn print_log(line: *const c_char) {
-    //log::error!("{:?}", line)
-    if let Err(e) = writeln!(file, "A new line!") {
-      log::error!("Couldn't write to log file: {}", e);
+  let logger = util::file_logger(lvl, log_file).unwrap();
+  log::set_logger(Box::new(logger));
+  debug!("Initiated logging in blocka_dns, level: {}, {}", lvl, log);
+
+  extern "C" fn log_panic(line: *const c_char) {
+    match CStr::from_ptr(line).to_str() {
+      Ok(line) => error!(line),
+      Err(e) => error!("Couldn't write to log file: {}", e),
     }
   }
 
-  util::ffi::panic_hook(Some(print_log));
+  util::ffi::panic_hook(Some(log_panic));
 
   if lvl == "info" {
     android_logger::init_once(Config::default().with_min_level(Level::Info));
