@@ -9,6 +9,10 @@ use jni::sys::{jboolean, jlong, jchar};
 use jni::JNIEnv;
 
 use crate::ffi;
+use std::os::raw::c_char;
+
+use std::fs::OpenOptions;
+use std::io::prelude::*;
 
 extern crate android_logger;
 use log::Level;
@@ -58,6 +62,7 @@ pub unsafe extern "C" fn close_dns(
 ) {
   match DNS_HANDLE {
     Some(h) => {
+      panic!("lol this crash");
       ffi::dns_close(h);
       DNS_HANDLE = None;
     }
@@ -73,14 +78,27 @@ pub unsafe extern "C" fn engine_logger(
   env: JNIEnv,
   _class: JClass,
   level: JString,
+  logfile: JString,
 ) {
   let lvl: String = env.get_string(level).expect("JNI param fail").into();
+  let log: String = env.get_string(logfile).expect("JNI param fail").into();
 
-  log::debug!("Initiated logging in blocka_dns, level: {}", lvl);
+  log::debug!("Initiated logging in blocka_dns, level: {}, {}", lvl, log);
 
-  // util::ffi::panic_hook(Some(|line| {
-      // log::error!("{}", line)
-  // }));
+  let file = OpenOptions::new()
+    .write(true)
+    .append(true)
+    .open(log)
+    .unwrap();
+
+  extern "C" fn print_log(line: *const c_char) {
+    //log::error!("{:?}", line)
+    if let Err(e) = writeln!(file, "A new line!") {
+      log::error!("Couldn't write to log file: {}", e);
+    }
+  }
+
+  util::ffi::panic_hook(Some(print_log));
 
   if lvl == "info" {
     android_logger::init_once(Config::default().with_min_level(Level::Info));
