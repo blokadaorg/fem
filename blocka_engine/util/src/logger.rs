@@ -61,6 +61,8 @@ impl log::Log for FileLogger {
     if self.enabled(record.metadata()) {
       if let Err(e) = format(log_file, "ENGINE", record) {
         println!("{}", e);
+      } else {
+        log_file.flush().unwrap();
       }
     }
   }
