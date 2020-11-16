@@ -84,9 +84,9 @@
     <string name="home_power_action_turn_on">Turn on</string>
     <string name="home_power_action_turn_off">Turn off</string>
     <string name="home_power_action_pause">Pause for 5 min</string>
-    <string name="home_status_paused">PAUSED</string>
-    <string name="home_status_active">ACTIVE</string>
-    <string name="home_status_deactivated">DEACTIVATED</string>
+    <string name="home_status_paused">Paused</string>
+    <string name="home_status_active">Active</string>
+    <string name="home_status_deactivated">Deactivated</string>
     <string name="home_action_tap_to_activate">tap to activate</string>
     <string name="home_status_detail_paused">paused until timer ends</string>
     <string name="home_status_detail_active">blocking *ads* and *trackers*</string>
@@ -238,7 +238,7 @@
     <string name="payment_feature_title_devices">Up to 5 devices</string>
     <string name="payment_feature_desc_devices">Use the same account to share your subscription with up to 5 devices: iOS, Android, or PC.</string>
     <string name="payment_feature_title_no_ads">No Ads</string>
-    <string name="payment_feature_desc_no_ads">Keep using the world famous Blokada adblocking technology while improving your protection level and keeping your data private.</string>
+    <string name="payment_feature_desc_no_ads">Keep using the world famous Blokada ad blocking technology while improving your protection level and keeping your data private.</string>
     <string name="payment_feature_title_support">Great Support</string>
     <string name="payment_feature_desc_support">Get a prompt response to any questions thanks to our Customer Support and vibrant open source community.</string>
     <string name="payment_action_see_all_features">See All Features</string>
